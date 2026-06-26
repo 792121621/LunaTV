@@ -1,0 +1,42 @@
+name: Sync Upstream
+
+on:
+  push:
+    branches:
+      - backup
+  schedule:
+    - cron: '0 1 1 * *' # 每月1号1点自动运行
+  workflow_dispatch: # 允许手动触发
+
+jobs:
+  sync_upstream:
+  #sync_latest_from_upstream:
+    runs-on: ubuntu-latest
+    #name: 同步上游仓库的最新提交
+
+    steps:
+      # 步骤 1: 检出目标仓库
+      - name: 检出目标仓库
+        uses: actions/checkout@v3
+        with:
+          ref: main # 你的目标分支
+          persist-credentials: false # 如果上游是私有仓库，必须设置为 false
+
+      # 步骤 2: 运行同步 Action
+      - name: 同步上游更改
+        id: sync
+        uses: aormsby/Fork-Sync-With-Upstream-action@v3.4.1
+        with:
+          target_sync_branch: main # 你的目标分支
+          target_repo_token: ${{ secrets.GITHUB_TOKEN }} # 用于推送更改到你的仓库
+          upstream_sync_branch: main # 上游仓库的分支
+          upstream_sync_repo: MoonTechLab/LunaTV # 上游仓库地址
+          # 如果上游是私有仓库，取消注释以下行并设置访问令牌
+          # upstream_repo_access_token: ${{ secrets.UPSTREAM_REPO_SECRET }}
+          # git_pull_args: '--allow-unrelated-histories' # 允许合并无共享历史的提交，适用于非 fork 关系
+          test_mode: false # 设置为 true 可运行测试模式，不实际推送
+
+      # 步骤 3: 检查是否有新提交（可选）
+      - name: 检查新提交
+        if: steps.sync.outputs.has_new_commits
+        run: echo "已从上游同步新提交。"
